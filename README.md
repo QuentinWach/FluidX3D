@@ -915,7 +915,7 @@ section NVS 290
 	9 :Nvidia, 0, 9
 section Arise 1020
 	6 :Glenfly, 0, 6
-	
+
 section M5 (10-CU, 32GB)
 	1613 :Apple, 0, 1613
 section M2 Ultra (76-CU, 192GB)
