@@ -693,18 +693,21 @@ int main(int argc, char* argv[]) {
 	Window x11_root_window = DefaultRootWindow(x11_display);
 	XRRScreenResources* x11_screen_resources = XRRGetScreenResources(x11_display, x11_root_window);
 	if(x11_screen_resources!=nullptr) {
-		XRROutputInfo* x11_output_info = XRRGetOutputInfo(x11_display, x11_screen_resources, XRRGetOutputPrimary(x11_display, x11_root_window));
-		if(x11_output_info!=nullptr) {
-			XRRCrtcInfo* x11_crtc_info = XRRGetCrtcInfo(x11_display, x11_screen_resources, x11_output_info->crtc);
-			if(x11_crtc_info!=nullptr) {
-				width  = (uint)x11_crtc_info->width; // width and height of primary monitor
-				height = (uint)x11_crtc_info->height;
-				window_offset_x = (int)x11_crtc_info->x; // offset of primary monitor in multi-monitor coordinates
-				window_offset_y = (int)x11_crtc_info->y;
+		RROutput x11_output_primary = XRRGetOutputPrimary(x11_display, x11_root_window);
+		if(x11_output_primary!=None) {
+			XRROutputInfo* x11_output_info = XRRGetOutputInfo(x11_display, x11_screen_resources, x11_output_primary);
+			if(x11_output_info!=nullptr) {
+				XRRCrtcInfo* x11_crtc_info = XRRGetCrtcInfo(x11_display, x11_screen_resources, x11_output_info->crtc);
+				if(x11_crtc_info!=nullptr) {
+					width  = (uint)x11_crtc_info->width; // width and height of primary monitor
+					height = (uint)x11_crtc_info->height;
+					window_offset_x = (int)x11_crtc_info->x; // offset of primary monitor in multi-monitor coordinates
+					window_offset_y = (int)x11_crtc_info->y;
+				}
+				XRRFreeCrtcInfo(x11_crtc_info);
 			}
-			XRRFreeCrtcInfo(x11_crtc_info);
+			XRRFreeOutputInfo(x11_output_info);
 		}
-		XRRFreeOutputInfo(x11_output_info);
 	}
 	XRRFreeScreenResources(x11_screen_resources);
 	XRRScreenConfiguration* x11_screen_configuration = XRRGetScreenInfo(x11_display, x11_root_window);
