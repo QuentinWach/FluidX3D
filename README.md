@@ -527,7 +527,7 @@ config:
         [id$="AMD"] { fill: #ED1C24; stroke: #ED1C24 }
         [id$="Intel"] { fill: #0071C5; stroke: #0071C5 }
         [id$="Nvidia"] { fill: #76B900; stroke: #76B900 }
-        [id$="Apple"] { fill: #EFEFEF; stroke: #EFEFEF }
+        [id$="Apple"] { fill: #DFDFDF; stroke: #DFDFDF }
         [id$="ARM"] { fill: #886CE4; stroke: #886CE4 }
         [id$="Glenfly"] { fill: #FFF100; stroke: #FFF100 }
         [id$="AMDCPU"] { fill: #ED1C24; stroke: #ED1C24 }
@@ -625,6 +625,8 @@ section RX 9070 XT
 	6688 :AMD, 0, 6688
 section RX 9070
 	6019 :AMD, 0, 6019
+section RX 9060 XT
+	4362 :AMD, 0, 4362
 section RX 7900 XTX
 	7716 :AMD, 0, 7716
 section PRO W7900
@@ -647,6 +649,8 @@ section PRO W7600
 	2287 :AMD, 0, 2287
 section PRO W7500
 	1682 :AMD, 0, 1682
+section RX 6950 XT
+	4326 :AMD, 0, 4326
 section RX 6900 XT
 	4227 :AMD, 0, 4227
 section RX 6800 XT
@@ -679,6 +683,8 @@ section RX 580 4GB
 	1848 :AMD, 0, 1848
 section RX 580 2048SP 8GB
 	1622 :AMD, 0, 1622
+section RX 570 4GB
+	1814 :AMD, 0, 1814
 section RX 480 8GB
 	1908 :AMD, 0, 1908
 section Pro WX 5100
@@ -693,6 +699,8 @@ section R9 290X
 	1699 :AMD, 0, 1699
 section R9 290
 	1647 :AMD, 0, 1647
+section R9 285
+	1409 :AMD, 0, 1409
 section HD 7970
 	1563 :AMD, 0, 1563
 section HD 7870
@@ -918,6 +926,8 @@ section Arise 1020
 
 section M5 (10-CU, 32GB)
 	1613 :Apple, 0, 1613
+section M3 Ultra (60-CU, 96GB)
+	8174 :Apple, 0, 8174
 section M2 Ultra (76-CU, 192GB)
 	8769 :Apple, 0, 8769
 section M2 Max (38-CU, 32GB)
@@ -1134,6 +1144,7 @@ Colors: 🔴 AMD, 🔵 Intel, 🟢 Nvidia, ⚪ Apple, 🟣 ARM, 🟡 Glenfly
 | 🔴&nbsp;Radeon&nbsp;AI&nbsp;PRO&nbsp;R9700       |              47.84 |          32 |          640 |             3176 (76%) |              6198 (75%) |              6395 (77%) |
 | 🔴&nbsp;Radeon&nbsp;RX&nbsp;9070&nbsp;XT         |              48.66 |          16 |          640 |             3089 (74%) |              6688 (80%) |              6090 (73%) |
 | 🔴&nbsp;Radeon&nbsp;RX&nbsp;9070                 |              36.13 |          16 |          640 |             3007 (72%) |              5746 (69%) |              6019 (72%) |
+| 🔴&nbsp;Radeon&nbsp;RX&nbsp;9060&nbsp;XT         |              22.77 |          16 |          320 |             1504 (72%) |              3255 (78%) |              3685 (89%) |
 | 🔴&nbsp;Radeon&nbsp;RX&nbsp;7900&nbsp;XTX        |              61.44 |          24 |          960 |             3665 (58%) |              7644 (61%) |              7716 (62%) |
 | 🔴&nbsp;Radeon&nbsp;PRO&nbsp;W7900               |              61.30 |          48 |          864 |             3107 (55%) |              5939 (53%) |              5780 (52%) |
 | 🔴&nbsp;Radeon&nbsp;RX&nbsp;7900&nbsp;XT         |              51.61 |          20 |          800 |             3013 (58%) |              5856 (56%) |              5986 (58%) |
@@ -1145,6 +1156,7 @@ Colors: 🔴 AMD, 🔵 Intel, 🟢 Nvidia, ⚪ Apple, 🟣 ARM, 🟡 Glenfly
 | 🔴&nbsp;Radeon&nbsp;RX&nbsp;7600                 |              21.75 |           8 |          288 |             1250 (66%) |              2561 (68%) |              2512 (67%) |
 | 🔴&nbsp;Radeon&nbsp;PRO&nbsp;W7600               |              20.00 |           8 |          288 |             1179 (63%) |              2263 (61%) |              2287 (61%) |
 | 🔴&nbsp;Radeon&nbsp;PRO&nbsp;W7500               |              12.20 |           8 |          172 |              856 (76%) |              1630 (73%) |              1682 (75%) |
+| 🔴&nbsp;Radeon&nbsp;RX&nbsp;6950&nbsp;XT         |              27.85 |          16 |          576 |             2130 (57%) |              4280 (57%) |              4362 (58%) |
 | 🔴&nbsp;Radeon&nbsp;RX&nbsp;6900&nbsp;XT         |              23.04 |          16 |          512 |             1968 (59%) |              4227 (64%) |              4207 (63%) |
 | 🔴&nbsp;Radeon&nbsp;RX&nbsp;6800&nbsp;XT         |              20.74 |          16 |          512 |             2008 (60%) |              4241 (64%) |              4224 (64%) |
 | 🔴&nbsp;Radeon&nbsp;PRO&nbsp;W6800               |              17.83 |          32 |          512 |             1620 (48%) |              3361 (51%) |              3180 (48%) |
@@ -1161,6 +1173,7 @@ Colors: 🔴 AMD, 🔵 Intel, 🟢 Nvidia, ⚪ Apple, 🟣 ARM, 🟡 Glenfly
 | 🔴&nbsp;Radeon&nbsp;RX&nbsp;590                  |               5.53 |           8 |          256 |             1257 (75%) |              1573 (47%) |              1688 (51%) |
 | 🔴&nbsp;Radeon&nbsp;RX&nbsp;580&nbsp;4GB         |               6.50 |           4 |          256 |              946 (57%) |              1848 (56%) |              1577 (47%) |
 | 🔴&nbsp;Radeon&nbsp;RX&nbsp;580&nbsp;2048SP&nbsp;8GB |           4.94 |           8 |          224 |              868 (59%) |              1622 (56%) |              1240 (43%) |
+| 🔴&nbsp;Radeon&nbsp;RX&nbsp;570&nbsp;4GB         |               5.10 |           4 |          224 |             2021 (70%) |              1814 (62%) |              1430 (49%) |
 | 🔴&nbsp;Radeon&nbsp;RX&nbsp;480&nbsp;8GB         |               5.83 |           8 |          256 |             1104 (66%) |              1908 (57%) |              1550 (47%) |
 | 🔴&nbsp;Radeon&nbsp;Pro&nbsp;WX&nbsp;5100        |               3.89 |           8 |          160 |              951 (91%) |              1604 (77%) |               927 (45%) |
 | 🔴&nbsp;Radeon&nbsp;R9&nbsp;Fury&nbsp;X          |               8.60 |           4 |          512 |             1628 (49%) |              2880 (43%) |              2507 (38%) |
@@ -1168,6 +1181,7 @@ Colors: 🔴 AMD, 🔵 Intel, 🟢 Nvidia, ⚪ Apple, 🟣 ARM, 🟡 Glenfly
 | 🔴&nbsp;Radeon&nbsp;R9&nbsp;390X                 |               5.91 |           8 |          384 |             1733 (69%) |              2217 (44%) |              1722 (35%) |
 | 🔴&nbsp;Radeon&nbsp;R9&nbsp;290X                 |               5.63 |           4 |          320 |             1245 (60%) |              1699 (41%) |              1387 (33%) |
 | 🔴&nbsp;Radeon&nbsp;R9&nbsp;290                  |               4.85 |           4 |          320 |             1136 (54%) |              1647 (40%) |              1272 (31%) |
+| 🔴&nbsp;Radeon&nbsp;R9&nbsp;285                  |               3.29 |           2 |          176 |              782 (68%) |              1409 (62%) |               992 (43%) |
 | 🔴&nbsp;Radeon&nbsp;HD&nbsp;7970                 |               3.79 |           3 |          264 |              193 (11%) |              1270 (37%) |              1563 (46%) |
 | 🔴&nbsp;Radeon&nbsp;HD&nbsp;7870                 |               2.56 |           2 |          154 |              105 (10%) |               716 (36%) |               868 (44%) |
 | 🔴&nbsp;Radeon&nbsp;HD&nbsp;7850                 |               1.84 |           2 |          154 |              112 (11%) |               120 ( 6%) |               635 (32%) |
@@ -1281,6 +1295,7 @@ Colors: 🔴 AMD, 🔵 Intel, 🟢 Nvidia, ⚪ Apple, 🟣 ARM, 🟡 Glenfly
 | 🟡&nbsp;Arise&nbsp;1020                          |               1.50 |           2 |           19 |                6 ( 5%) |                 6 ( 2%) |                 6 ( 2%) |
 |                                                  |                    |             |              |                        |                         |                         |
 | ⚪&nbsp;M5&nbsp;GPU&nbsp;10CU&nbsp;32GB          |               2.56 |          18 |          153 |              800 (80%) |              1596 (80%) |              1613 (81%) |
+| ⚪&nbsp;M3&nbsp;Ultra&nbsp;GPU&nbsp;60CU&nbsp;99GB |            15.36 |          79 |          819 |             4438 (83%) |              8174 (77%) |              8086 (76%) |
 | ⚪&nbsp;M2&nbsp;Ultra&nbsp;GPU&nbsp;76CU&nbsp;192GB |           19.46 |         147 |          800 |             4629 (89%) |              8769 (84%) |              7972 (77%) |
 | ⚪&nbsp;M2&nbsp;Max&nbsp;GPU&nbsp;38CU&nbsp;32GB |               9.73 |          22 |          400 |             2405 (92%) |              4641 (89%) |              2444 (47%) |
 | ⚪&nbsp;M2&nbsp;Pro&nbsp;GPU&nbsp;19CU&nbsp;16GB |               4.86 |          11 |          200 |             1195 (91%) |              2374 (91%) |              2173 (84%) |
@@ -1389,7 +1404,7 @@ config:
         [id$="AMD"] { fill: #ED1C24; stroke: #ED1C24 }
         [id$="Intel"] { fill: #0071C5; stroke: #0071C5 }
         [id$="Nvidia"] { fill: #76B900; stroke: #76B900 }
-        [id$="Apple"] { fill: #EFEFEF; stroke: #EFEFEF }
+        [id$="Apple"] { fill: #DFDFDF; stroke: #DFDFDF }
         [id$="ARM"] { fill: #886CE4; stroke: #886CE4 }
         [id$="Glenfly"] { fill: #FFF100; stroke: #FFF100 }
         [id$="AMDCPU"] { fill: #ED1C24; stroke: #ED1C24 }
