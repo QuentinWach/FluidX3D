@@ -244,7 +244,7 @@ The fastest and most memory efficient lattice Boltzmann CFD software, running on
   - improved "hydraulic jump" sample setup
   - updated GPU driver install instructions
   - disabled zero-copy on ARM iGPUs because `CL_MEM_USE_HOST_PTR` is broken there
-- [v3.6](https://github.com/ProjectPhysX/FluidX3D/releases/tag/v3.6) (24.03.2026) [changes](https://github.com/ProjectPhysX/FluidX3D/compare/v3.5...v3.6) (multi-GPU particles)
+- [v3.6](https://github.com/ProjectPhysX/FluidX3D/releases/tag/v3.6) (24.03.2026) [changes](https://github.com/ProjectPhysX/FluidX3D/compare/v3.5...v3.6) (improved macOS graphics)
   - improved `INTERACTIVE_GRAPHICS` support on macOS with XQuartz
   - added `Mesh::get_center_of_mass()` function, for easy rotation of any balanced rotor
   - made performance `mermaid` `gantt` chart in Readme properly colored
