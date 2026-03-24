@@ -156,7 +156,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 	const float3 d = p-Rz*(dis/zoom)-pos; // distance vector between p and camera position
 	const float nl2 = sq(normal.x)+sq(normal.y)+sq(normal.z); // only one rsqrt instead of two
 	const float dl2 = sq(d.x)+sq(d.y)+sq(d.z);
-	return color_mul(c, max(1.5f*fabs(dot(normal, d))*rsqrt(nl2*dl2), 0.3f));
+	return color_mul(c, max(1.25f*fabs(dot(normal, d))*rsqrt(nl2*dl2), 0.3f));
 )+"#else"+R( // GRAPHICS_TRANSPARENCY
 	return c; // disable flat shading, just return input color
 )+"#endif"+R( // GRAPHICS_TRANSPARENCY
@@ -967,13 +967,18 @@ string opencl_c_container() { return R( // ########################## begin of O
 )+"#endif"+R( // D3Q27
 } // neighbors()
 
-)+R(float3 load3(const uxx n, const global float* v) {
-	return (float3)(v[n], v[def_N+(ulong)n], v[2ul*def_N+(ulong)n]);
+)+R(float3 load3(const global float* p, const uxx n) {
+	return (float3)(p[n], p[def_N+(ulong)n], p[2ul*def_N+(ulong)n]);
 }
-)+R(float3 closest_u(const float3 p, const global float* u) { // return velocity of closest lattice point to point p
-	return load3(index(closest_coordinates(p)), u);
+)+R(void store3(global float* p, const uxx n, const float3 v) {
+	p[                 n] = v.x;
+	p[    def_N+(ulong)n] = v.y;
+	p[2ul*def_N+(ulong)n] = v.z;
 }
-)+R(float3 interpolate_u(const float3 p, const global float* u) { // trilinear interpolation of velocity at point p
+)+R(float3 closest_u(const global float* u, const float3 p) { // return velocity of closest lattice point to point p
+	return load3(u, index(closest_coordinates(p)));
+}
+)+R(float3 interpolate_u(const global float* u, const float3 p) { // trilinear interpolation of velocity at point p
 	const float xa=p.x-0.5f+1.5f*(float)def_Nx, ya=p.y-0.5f+1.5f*(float)def_Ny, za=p.z-0.5f+1.5f*(float)def_Nz; // subtract lattice offsets
 	const uint xb=(uint)xa, yb=(uint)ya, zb=(uint)za; // integer casting to find bottom left corner
 	const float3 pn = (float3)(xa-(float)xb, ya-(float)yb, za-(float)zb); // calculate interpolation factors
@@ -982,7 +987,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 		const uint i=(c&0x04u)>>2, j=(c&0x02u)>>1, k=c&0x01u; // disassemble c into corner indices ijk
 		const uint x=(xb+i)%def_Nx, y=(yb+j)%def_Ny, z=(zb+k)%def_Nz; // calculate corner lattice positions
 		const uxx n = (uxx)x+(uxx)(y+z*def_Ny)*(uxx)def_Nx; // calculate lattice linear index
-		un[c] = load3(n, u); // load velocity from lattice point
+		un[c] = load3(u, n); // load velocity from lattice point
 	}
 	return trilinear3(pn, un); // perform trilinear interpolation
 } // interpolate_u()
@@ -1004,7 +1009,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 	j[0] = xp+y0+z0; j[1] = xm+y0+z0; // +00 -00
 	j[2] = x0+yp+z0; j[3] = x0+ym+z0; // 0+0 0-0
 	j[4] = x0+y0+zp; j[5] = x0+y0+zm; // 00+ 00-
-	return calculate_Q_cached(load3(j[0], u), load3(j[1], u), load3(j[2], u), load3(j[3], u), load3(j[4], u), load3(j[5], u));
+	return calculate_Q_cached(load3(u, j[0]), load3(u, j[1]), load3(u, j[2]), load3(u, j[3]), load3(u, j[4]), load3(u, j[5]));
 } // calculate_Q()
 
 )+R(void calculate_f_eq(const float rho, float ux, float uy, float uz, float* feq) { // calculate f_equilibrium from density and velocity field (perturbation method / DDF-shifting)
@@ -1380,17 +1385,9 @@ string opencl_c_container() { return R( // ########################## begin of O
 	if(flagsn_bo==TYPE_S) { // cell is solid
 		bool TYPE_ONLY_S = true; // has only solid neighbors
 		for(uint i=1u; i<def_velocity_set; i++) TYPE_ONLY_S = TYPE_ONLY_S&&(flagsj[i]&TYPE_BO)==TYPE_S;
-		if(TYPE_ONLY_S) {
-			u[                 n] = 0.0f; // reset velocity for solid lattice points with only boundary neighbors
-			u[    def_N+(ulong)n] = 0.0f;
-			u[2ul*def_N+(ulong)n] = 0.0f;
-		}
+		if(TYPE_ONLY_S) store3(u, n, (float3)(0.0f, 0.0f, 0.0f)); // reset velocity for solid lattice points with only boundary neighbors
 )+"#ifndef MOVING_BOUNDARIES"+R(
-		if(flagsn_bo==TYPE_S) {
-			u[                 n] = 0.0f; // reset velocity for all solid lattice points
-			u[    def_N+(ulong)n] = 0.0f;
-			u[2ul*def_N+(ulong)n] = 0.0f;
-		}
+		if(flagsn_bo==TYPE_S) store3(u, n, (float3)(0.0f, 0.0f, 0.0f)); // reset velocity for all solid lattice points
 )+"#else"+R( // MOVING_BOUNDARIES
 	} else if(flagsn_bo!=TYPE_E) { // local lattice point is not solid and not equilibrium boundary
 		bool next_to_moving_boundary = false;
@@ -1418,9 +1415,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 			}
 		}
 		if((flagsn&TYPE_SU)==TYPE_G) { // cell with updated flags is still gas
-			u[                 n] = 0.0f; // reset velocity for gas cells
-			u[    def_N+(ulong)n] = 0.0f;
-			u[2ul*def_N+(ulong)n] = 0.0f;
+			store3(u, n, (float3)(0.0f, 0.0f, 0.0f)); // reset velocity for gas cells
 			phin = 0.0f;
 		} else if((flagsn&TYPE_SU)==TYPE_I && (phin<0.0f||phin>1.0f)) {
 			phin = 0.5f; // cell should be interface, but phi was invalid
@@ -1583,10 +1578,8 @@ string opencl_c_container() { return R( // ########################## begin of O
 	if(flagsn_bo!=TYPE_E) // only update fields for non-TYPE_E cells
 )+"#endif"+R( // EQUILIBRIUM_BOUNDARIES
 	{
-		rho[               n] = rhon; // update density field
-		u[                 n] = uxn; // update velocity field
-		u[    def_N+(ulong)n] = uyn;
-		u[2ul*def_N+(ulong)n] = uzn;
+		rho[n] = rhon; // update density field
+		store3(u, n, (float3)(uxn, uyn, uzn)); // update velocity field
 	}
 )+"#endif"+R( // UPDATE_FIELDS
 
@@ -1878,19 +1871,13 @@ string opencl_c_container() { return R( // ########################## begin of O
 )+"#endif"+R( // VOLUME_FORCE
 	}
 
-)+"#ifndef EQUILIBRIUM_BOUNDARIES"+R(
-	rho[               n] = rhon; // update density field
-	u[                 n] = uxn; // update velocity field
-	u[    def_N+(ulong)n] = uyn;
-	u[2ul*def_N+(ulong)n] = uzn;
-)+"#else"+R( // EQUILIBRIUM_BOUNDARIES
-	if(flagsn_bo!=TYPE_E) { // only update fields for non-TYPE_E cells
-		rho[               n] = rhon; // update density field
-		u[                 n] = uxn; // update velocity field
-		u[    def_N+(ulong)n] = uyn;
-		u[2ul*def_N+(ulong)n] = uzn;
-	}
+)+"#ifdef EQUILIBRIUM_BOUNDARIES"+R(
+	if(flagsn_bo!=TYPE_E) // only update fields for non-TYPE_E cells
 )+"#endif"+R( // EQUILIBRIUM_BOUNDARIES
+	{
+		rho[n] = rhon; // update density field
+		store3(u, n, (float3)(uxn, uyn, uzn)); // update velocity field
+	}
 } // update_fields()
 
 )+"#ifdef FORCE_FIELD"+R(
@@ -1904,16 +1891,12 @@ string opencl_c_container() { return R( // ########################## begin of O
 	load_f(n, fhn, fi, j, t); // perform streaming (part 2)
 	float Fb=1.0f, fx=0.0f, fy=0.0f, fz=0.0f;
 	calculate_rho_u(fhn, &Fb, &fx, &fy, &fz); // abuse calculate_rho_u() method for calculating force
-	F[                 n] = 2.0f*fx*Fb; // 2 times because fi are reflected on solid boundary cells (bounced-back)
-	F[    def_N+(ulong)n] = 2.0f*fy*Fb;
-	F[2ul*def_N+(ulong)n] = 2.0f*fz*Fb;
+	store3(F, n, 2.0f*Fb*(float3)(fx, fy, fz)); // 2x because fi are reflected on solid boundary cells (bounced-back)
 } // update_force_field()
 )+R(kernel void reset_force_field(global float* F) { // reset force field
 	const uxx n = get_global_id(0); // n = x+(y+z*Ny)*Nx
 	if(n>=(uxx)def_N) return; // execute reset_force_field() also on halo
-	F[                 n] = 0.0f;
-	F[    def_N+(ulong)n] = 0.0f;
-	F[2ul*def_N+(ulong)n] = 0.0f;
+	store3(F, n, (float3)(0.0f, 0.0f, 0.0f));
 } // reset_force_field()
 )+R(void atomic_add_f(volatile global float* addr, const float val) {
 )+"#if cl_nv_compute_capability>=20"+R( // use hardware-supported atomic addition on Nvidia GPUs with inline PTX assembly
@@ -1955,7 +1938,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 	const uxx n = get_global_id(0); // n = x+(y+z*Ny)*Nx
 	const uint lid = get_local_id(0); // local memory reduction of cl_workgroup_size:1
 	local float3 cache[cl_workgroup_size];
-	cache[lid] = n<(uxx)def_N&&flags[n]==flag_marker ? load3(n, F) : (float3)(0.0f, 0.0f, 0.0f);
+	cache[lid] = n<(uxx)def_N&&flags[n]==flag_marker ? load3(F, n) : (float3)(0.0f, 0.0f, 0.0f);
 	barrier(CLK_GLOBAL_MEM_FENCE);
 	for(uint s=1u; s<cl_workgroup_size; s*=2u) {
 		if(lid%(2u*s)==0u) cache[lid] += cache[lid+s];
@@ -1972,7 +1955,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 	const uxx n = get_global_id(0); // n = x+(y+z*Ny)*Nx
 	const uint lid = get_local_id(0); // local memory reduction of cl_workgroup_size:1
 	local float3 cache[cl_workgroup_size];
-	cache[lid] = n<(uxx)def_N&&flags[n]==flag_marker ? cross(position(coordinates(n))-(float3)(cx, cy, cz), load3(n, F)) : (float3)(0.0f, 0.0f, 0.0f);
+	cache[lid] = n<(uxx)def_N&&flags[n]==flag_marker ? cross(position(coordinates(n))-(float3)(cx, cy, cz), load3(F, n)) : (float3)(0.0f, 0.0f, 0.0f);
 	barrier(CLK_GLOBAL_MEM_FENCE);
 	for(uint s=1u; s<cl_workgroup_size; s*=2u) {
 		if(lid%(2u*s)==0u) cache[lid] += cache[lid+s];
@@ -2059,7 +2042,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 		if(def_Dx*def_Dy*def_Dz>1u&&!position_is_in_domain_excluding_halo(p)) { // skip remaining ghost particles in halo
 			p.x = as_float(0xFFFFFFFFu); // invalidate x-coordinate for all particles outside of the local domain
 		} else { // advect only particles in local domain (excluding halo)
-			float3 un = interpolate_u(p, u); // trilinear interpolation of velocity at point p
+			float3 un = interpolate_u(u, p); // trilinear interpolation of velocity at point p
 			un = (un+length(un)*particle_boundary_force(p, flags))*time_step_multiplicator;
 			p += un; // advect particles
 			p += (float3)(def_domain_offset_x, def_domain_offset_y, def_domain_offset_z); // add domain offset, back to global domain
@@ -2302,14 +2285,21 @@ string opencl_c_container() { return R( // ########################## begin of O
 	const uint triangle_number = as_uint(bbu[0]);
 	const float x0=bbu[ 1], y0=bbu[ 2], z0=bbu[ 3], x1=bbu[ 4], y1=bbu[ 5], z1=bbu[ 6];
 	const float cx=bbu[ 7], cy=bbu[ 8], cz=bbu[ 9], ux=bbu[10], uy=bbu[11], uz=bbu[12], rx=bbu[13], ry=bbu[14], rz=bbu[15];
-	const uint3 xyz = direction==0u ? (uint3)((uint)clamp((int)x0-def_Ox, 0, (int)def_Nx-1), a%def_Ny, a/def_Ny) : direction==1u ? (uint3)(a/def_Nz, (uint)clamp((int)y0-def_Oy, 0, (int)def_Ny-1), a%def_Nz) : (uint3)(a%def_Nx, a/def_Nx, (uint)clamp((int)z0-def_Oz, 0, (int)def_Nz-1));
+	const uint hmin = direction==0u ? (uint)clamp((int)x0-def_Ox, 0, (int)def_Nx-1) :
+	                  direction==1u ? (uint)clamp((int)y0-def_Oy, 0, (int)def_Ny-1) :
+	                                  (uint)clamp((int)z0-def_Oz, 0, (int)def_Nz-1);
+	const uint hmax = direction==0u ? (uint)clamp((int)x1-def_Ox, 0, (int)def_Nx-1) :
+	                  direction==1u ? (uint)clamp((int)y1-def_Oy, 0, (int)def_Ny-1) :
+	                                  (uint)clamp((int)z1-def_Oz, 0, (int)def_Nz-1);
+	const uint3 xyz = direction==0u ? (uint3)(hmin, a%def_Ny, a/def_Ny) :
+	                  direction==1u ? (uint3)(a/def_Nz, hmin, a%def_Nz) :
+	                                  (uint3)(a%def_Nx, a/def_Nx, hmin);
 	const float3 offset = (float3)(0.5f*(float)((int)def_Nx+2*def_Ox)-0.5f, 0.5f*(float)((int)def_Ny+2*def_Oy)-0.5f, 0.5f*(float)((int)def_Nz+2*def_Oz)-0.5f);
 	const float3 r_origin = position(xyz)+offset;
 	const float3 r_direction = (float3)((float)(direction==0u), (float)(direction==1u), (float)(direction==2u));
 	uint intersections=0u, intersections_check=0u;
 	ushort distances[64]; // allow up to 64 mesh intersections
 	const bool condition = direction==0u ? r_origin.y<y0||r_origin.z<z0||r_origin.y>=y1||r_origin.z>=z1 : direction==1u ? r_origin.x<x0||r_origin.z<z0||r_origin.x>=x1||r_origin.z>=z1 : r_origin.x<x0||r_origin.y<y0||r_origin.x>=x1||r_origin.y>=y1;
-
 	if(condition) return; // don't use local memory (~25% slower, but this also runs on old OpenCL 1.0 GPUs)
 	for(uint i=0u; i<triangle_number; i++) {
 		const uint tx=3u*i, ty=tx+1u, tz=ty+1u;
@@ -2327,7 +2317,6 @@ string opencl_c_container() { return R( // ########################## begin of O
 			}
 		}
 	}
-
 	for(uint i=1u; i<min(intersections, 64u); i++) { // insertion-sort distances
 		ushort t = distances[i];
 		uint j = i;
@@ -2341,9 +2330,8 @@ string opencl_c_container() { return R( // ########################## begin of O
 	const bool set_u = sq(ux)+sq(uy)+sq(uz)+sq(rx)+sq(ry)+sq(rz)>0.0f;
 	uint intersection = intersections%2u!=intersections_check%2u; // iterate through column, start with 0 regularly, start with 1 if forward and backward intersection count evenness differs (error correction)
 	const uint h0 = direction==0u ? xyz.x : direction==1u ? xyz.y : xyz.z;
-	const uint hmax = direction==0u ? (uint)clamp((int)x1-def_Ox, 0, (int)def_Nx) : direction==1u ? (uint)clamp((int)y1-def_Oy, 0, (int)def_Ny) : (uint)clamp((int)z1-def_Oz, 0, (int)def_Nz);
 	const uint hmesh = h0+(uint)distances[min(intersections-1u, 63u)]; // clamp (intersections-1u) to prevent array out-of-bounds access
-	for(uint h=h0; h<hmax; h++) {
+	for(uint h=h0; h<=hmax; h++) {
 		while(intersection<intersections&&h>h0+(uint)distances[min(intersection, 63u)]) { // clamp intersection to prevent array out-of-bounds access
 			inside = !inside; // passed mesh intersection, so switch inside/outside state
 			intersection++;
@@ -2355,14 +2343,10 @@ string opencl_c_container() { return R( // ########################## begin of O
 		const float3 u_set = (float3)(ux, uy, uz)+cross((float3)(cx, cy, cz)-p, (float3)(rx, ry, rz));
 		if(inside) { // cell is inside of mesh geometry
 			flagsn = (flagsn&~TYPE_BO)|flag; // set flag
-			if(set_u) { // set solid velocity
-				u[                 n] = u_set.x;
-				u[    def_N+(ulong)n] = u_set.y;
-				u[2ul*def_N+(ulong)n] = u_set.z;
-			}
+			if(set_u) store3(u, n, u_set); // set solid velocity
 		} else { // cell is outside of mesh geometry
-			if((flagsn&TYPE_BO)==TYPE_S) { // cell was previously solid
-				const float3 un = (float3)(u[n], u[def_N+(ulong)n], u[2ul*def_N+(ulong)n]); // load previous velocity
+			if((flagsn&TYPE_BO)==TYPE_S&&(flagsn&TYPE_XY)==(flag&TYPE_XY)) { // cell was previously marked solid
+				const float3 un = load3(u, n); // load previous velocity
 				if(un.x==u_set.x&&un.y==u_set.y&&un.z==u_set.z) { // velocity matched: cell belonged to the currently voxelized geometry
 					if(set_u) { // reconstruct DDFs when solid cell is converted to fluid
 						uxx j[def_velocity_set]; // neighbor indices
@@ -2475,7 +2459,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 	if(!is_in_camera_frustrum(p, camera_cache)) return; // skip loading LBM data if grid cell is not visible
 	uxx x0, xp, xm, y0, yp, ym, z0, zp, zm;
 	calculate_indices(n, &x0, &xp, &xm, &y0, &yp, &ym, &z0, &zp, &zm);
-	const int c =  // coloring scheme
+	const int c = // coloring scheme
 		flagsn_bo==TYPE_S ? COLOR_S : // solid boundary
 		((flagsn&TYPE_T)&&flagsn_bo==TYPE_E) ? color_average(COLOR_T, COLOR_E) : // both temperature boundary and equilibrium boundary
 		((flagsn&TYPE_T)&&flagsn_bo==TYPE_MS) ? color_average(COLOR_T, COLOR_M) : // both temperature boundary and moving boundary
@@ -2517,7 +2501,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 	if(!(not_xp||not_ym)) draw_line(p5, p6, c, camera_cache, bitmap, zbuffer);
 )+"#ifdef FORCE_FIELD"+R(
 	if(flagsn_bo==TYPE_S) {
-		const float3 Fn = def_scale_F*(float3)(F[n], F[def_N+(ulong)n], F[2ul*def_N+(ulong)n]);
+		const float3 Fn = def_scale_F*load3(F, n);
 		const float Fnl = length(Fn);
 		if(Fnl>0.0f) {
 			const int c = colorscale_iron(Fnl); // color boundaries depending on the force on them
@@ -2549,7 +2533,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 	if(tn==0u) return;
 )+"#ifdef FORCE_FIELD"+R(
 	float3 Fj[8];
-	for(uint i=0u; i<8u; i++) Fj[i] = v[i] ? load3(j[i], F) : (float3)(0.0f, 0.0f, 0.0f);
+	for(uint i=0u; i<8u; i++) Fj[i] = (v[i] ? load3(F, j[i]) : (float3)(0.0f, 0.0f, 0.0f));
 )+"#endif"+R( // FORCE_FIELD
 	for(uint i=0u; i<tn; i++) {
 		const float3 p0 = triangles[3u*i   ];
@@ -2588,7 +2572,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 )+"#else"+R( // MOVING_BOUNDARIES
 	if(flags[n]&(TYPE_I|TYPE_G)) return;
 )+"#endif"+R( // MOVING_BOUNDARIES
-	const float3 un = load3(n, u); // cache velocity
+	const float3 un = load3(u, n); // cache velocity
 	const float ul = length(un);
 	if(def_scale_u*ul<0.1f) return; // don't draw lattice points where the velocity is lower than this threshold
 	int c = 0; // coloring
@@ -2629,7 +2613,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 				if(xyz.x<0 || xyz.y<0 || xyz.z<0 || xyz.x>=(int)Nx || xyz.y>=(int)Ny || xyz.z>=(int)Nz) break; // out of simulation box
 				const uxx n = index((uint3)((uint)clamp(xyz.x, 0, (int)Nx-1), (uint)clamp(xyz.y, 0, (int)Ny-1), (uint)clamp(xyz.z, 0, (int)Nz-1)));
 				if(!(flags[n]&(TYPE_S|TYPE_E|TYPE_G))) {
-					const float un = length(load3(n, u));
+					const float un = length(load3(u, n));
 					const float weight = fmin(un, fabs(un-0.5f/def_scale_u));
 					sum = fma(weight, un, sum);
 					traversed_cells_weighted += weight;
@@ -2737,10 +2721,10 @@ string opencl_c_container() { return R( // ########################## begin of O
 	int c00=0, c01=0, c10=0, c11=0;
 	switch(field_mode) {
 		case 0: // coloring by velocity
-			c00 = colorscale_rainbow(def_scale_u*length(load3(n00, u)));
-			c01 = colorscale_rainbow(def_scale_u*length(load3(n01, u)));
-			c10 = colorscale_rainbow(def_scale_u*length(load3(n10, u)));
-			c11 = colorscale_rainbow(def_scale_u*length(load3(n11, u)));
+			c00 = colorscale_rainbow(def_scale_u*length(load3(u, n00)));
+			c01 = colorscale_rainbow(def_scale_u*length(load3(u, n01)));
+			c10 = colorscale_rainbow(def_scale_u*length(load3(u, n10)));
+			c11 = colorscale_rainbow(def_scale_u*length(load3(u, n11)));
 			break;
 		case 1: // coloring by density
 			c00 = colorscale_twocolor(0.5f+def_scale_rho*(rho[n00]-1.0f));
@@ -2806,7 +2790,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 			const uint z = (uint)(p1.z+1.5f*(float)def_Nz)%def_Nz;
 			const uxx n = (uxx)x+(uxx)(y+z*def_Ny)*(uxx)def_Nx;
 			if(flags[n]&(TYPE_S|TYPE_E|TYPE_I|TYPE_G)) return;
-			const float3 un = load3(n, u); // interpolate_u(p1, u)
+			const float3 un = load3(u, n); // interpolate_u(u, p1)
 			const float ul = length(un);
 			p0 = p1;
 			p1 += (dt/ul)*un; // integrate forward in time
@@ -2836,7 +2820,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 	float camera_cache[15]; // cache camera parameters in case the kernel draws more than one shape
 	for(uint i=0u; i<15u; i++) camera_cache[i] = camera[i];
 	if(!is_in_camera_frustrum(p, camera_cache)) return; // skip loading LBM data if grid cell is not visible
-	float3 un = load3(n, u); // cache velocity
+	float3 un = load3(u, n); // cache velocity
 	const float ul = length(un);
 	const float Q = calculate_Q(n, u);
 	if(Q<def_scale_Q_min||ul==0.0f) return; // don't draw lattice points where the velocity is very low
@@ -2874,7 +2858,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 	if(flags_cell&(TYPE_I|TYPE_G)) return;
 )+"#endif"+R( // SURFACE
 	float3 uj[32];
-	for(uint i=0u; i<32u; i++) uj[i] = load3(j[i], u);
+	for(uint i=0u; i<32u; i++) uj[i] = load3(u, j[i]);
 	float v[8]; // don't load any velocity twice from global memory
 	v[0] = calculate_Q_cached(uj[ 1], uj[ 8], uj[ 4], uj[ 9], uj[ 3], uj[10]);
 	v[1] = calculate_Q_cached(uj[11], uj[ 0], uj[ 5], uj[12], uj[ 2], uj[13]);

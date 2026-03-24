@@ -244,6 +244,15 @@ The fastest and most memory efficient lattice Boltzmann CFD software, running on
   - improved "hydraulic jump" sample setup
   - updated GPU driver install instructions
   - disabled zero-copy on ARM iGPUs because `CL_MEM_USE_HOST_PTR` is broken there
+- [v3.6](https://github.com/ProjectPhysX/FluidX3D/releases/tag/v3.6) (24.03.2026) [changes](https://github.com/ProjectPhysX/FluidX3D/compare/v3.5...v3.6) (multi-GPU particles)
+  - improved `INTERACTIVE_GRAPHICS` support on macOS with XQuartz
+  - added `Mesh::get_center_of_mass()` function, for easy rotation of any balanced rotor
+  - made performance `mermaid` `gantt` chart in Readme properly colored
+  - more robust Intel GPU core/CU detecton via `CL_DEVICE_IP_VERSION_INTEL`
+  - OpenCL code refactoring
+  - set `nvidia_compute_capability` only for Nvidia GPUs not Nvidia CPUs
+  - fixed TFLOPs/s estimate for AMD CDNA3/4 GPUs
+  - fixed Device Name and CU reporting for AMD GPUs with rusticl
 
 </details>
 
@@ -1840,25 +1849,25 @@ Colors: 🔴 AMD, 🔵 Intel, 🟢 Nvidia, ⚪ Apple, 🟣 ARM, 🟡 Glenfly
 
 - <details><summary>What physical model does FluidX3D use?</summary><br>FluidX3D implements the <a href="https://doi.org/10.15495/EPub_UBT_00005400">lattice Boltzmann method</a>, a type of direct numerical simulation (DNS), the most accurate type of fluid simulation, but also the most computationally challenging. Optional extension models implemented in FluidX3D include volume force (Guo forcing), free surface (<a href="https://doi.org/10.3390/computation10060092">volume-of-fluid</a> and <a href="https://doi.org/10.3390/computation10020021">PLIC</a>), a temperature model and Smagorinsky-Lilly subgrid turbulence model for DNS-LES simulations.<br><br></details>
 
-- <details><summary>What boundary types are available in FluidX3D?</summary><br>Periodic boundaries, solid boundaries, equilibrium boundaries, and moving solid boundaries.<br>See <a href="https://github.com/ProjectPhysX/FluidX3D/blob/master/DOCUMENTATION.md#initial-and-boundary-conditions">the relevant section in the FluidX3D Documentation</a>!<br><br></details>
+- <details><summary>What boundary types are available in FluidX3D?</summary><br>Periodic boundaries, solid boundaries, equilibrium boundaries, and moving solid boundaries.<br>See the <a href="https://github.com/ProjectPhysX/FluidX3D/blob/master/DOCUMENTATION.md#initial-and-boundary-conditions">section on initial/boundary conditions</a> in the FluidX3D Documentation!<br><br></details>
 
 - <details><summary>Does FluidX3D support adaptive mesh refinement?</summary><br>No, not yet. Grid cell size is the same everywhere in the simulation box.<br><br></details>
 
 - <details><summary>Can FluidX3D model both water and air at the same time?</summary><br>No. FluidX3D can model either water or air, but not both at the same time. For free surface simulations with the <a href="https://github.com/ProjectPhysX/FluidX3D/blob/master/DOCUMENTATION.md#surface-extension">SURFACE extension</a>, I went with a <a href="https://doi.org/10.3390/computation10060092">volume-of-fluid</a>/<a href="https://doi.org/10.3390/computation10020021">PLIC</a> modeling approach as that provides a sharp water-air interface, so individual droplets can be resolved as small as 3 grid cells in diameter. However this model ignores the gas phase completely, and only models the fluid phase with LBM as well as the surface tension. An alternative I had explored years ago was the <a href="http://dx.doi.org/10.1016/j.jcp.2022.111753">phase-field models</a> (simplest of them is Shan-Chen model) - they model both fluid and gas phases, but struggle with the 1:1000 density contrast of air:water, and the modeled interface is diffuse over ~5 grid cells. So the smallest resolved droplets are ~10 grid cells in diameter, meaning for the same resolution you need ~37x the memory footprint - infeasible on GPUs. Coming back to VoF model, it is possible to <a href="http://dx.doi.org/10.1186/s43591-023-00053-7">extend it with a model for the gas phase</a>, but one has to manually track bubble split/merge events, which makes this approach very painful in implementation and poorly performing on the hardware.<br><br></details>
 
-- <details><summary>Can FluidX3D compute lift/drag forces?</summary><br>Yes. See <a href="https://github.com/ProjectPhysX/FluidX3D/blob/master/DOCUMENTATION.md#liftdrag-forces">the relevant section in the FluidX3D Documentation</a>!<br><br></details>
+- <details><summary>Can FluidX3D compute lift/drag forces?</summary><br>Yes. See the <a href="https://github.com/ProjectPhysX/FluidX3D/blob/master/DOCUMENTATION.md#liftdrag-forces">lift/drag forces section</a> in the FluidX3D Documentation!<br><br></details>
 
 - <details><summary>Can FluidX3D simulate transsonic/supersonic flows?</summary><br>No. The LBM model in FluidX3D works only in the weakly compressible regime at Mach numbers < 0.3.<br><br></details>
 
-- <details><summary>How to simulate moving/rotating geometry?</summary><br>See <a href="https://github.com/ProjectPhysX/FluidX3D/blob/master/DOCUMENTATION.md#loading-stl-files">the section about .stl voxelization in FluidX3D Documentation</a>.<br><br></details>
+- <details><summary>How to simulate moving/rotating geometry?</summary><br>See the <a href="https://github.com/ProjectPhysX/FluidX3D/blob/master/DOCUMENTATION.md#loading-stl-files">section about .stl voxelization</a> in the FluidX3D Documentation.<br><br></details>
 
-- <details><summary>Can FluidX3D model thermal convection?</summary><br>Yes. See <a href="https://github.com/ProjectPhysX/FluidX3D/blob/master/DOCUMENTATION.md#temperature-extension">the relevant section in the FluidX3D Documentation</a>!<br><br></details>
+- <details><summary>Can FluidX3D model thermal convection?</summary><br>Yes. See the <a href="https://github.com/ProjectPhysX/FluidX3D/blob/master/DOCUMENTATION.md#temperature-extension">TEMPERATURE extension section</a> in the FluidX3D Documentation!<br><br></details>
 
 - <details><summary>Can FluidX3D model chemical reactions?</summary><br>No.<br><br></details>
 
-- <details><summary>Can FluidX3D model particles?</summary><br>Yes, either as passive tracer particles or with 2-way coupling (buoyancy). See <a href="https://github.com/ProjectPhysX/FluidX3D/blob/master/DOCUMENTATION.md#particles-extension">the relevant section in the FluidX3D Documentation</a>!<br><br></details>
+- <details><summary>Can FluidX3D model particles?</summary><br>Yes, either as passive tracer particles or with 2-way coupling (buoyancy). See the <a href="https://github.com/ProjectPhysX/FluidX3D/blob/master/DOCUMENTATION.md#particles-extension">PARTICLES extension section</a> in the FluidX3D Documentation!<br><br></details>
 
-- <details><summary>I see white lines or everything disappeared. Why?</summary><br>This indicates that the simulation has become unstable. See <a href="https://github.com/ProjectPhysX/FluidX3D/blob/master/DOCUMENTATION.md#7-suitable-parameters-and-simulation-instability">the relevant section in the FluidX3D Documentation</a>!<br><br></details>
+- <details><summary>I see white lines or everything disappeared. Why?</summary><br>This indicates that the simulation has become unstable. See the <a href="https://github.com/ProjectPhysX/FluidX3D/blob/master/DOCUMENTATION.md#7-suitable-parameters-and-simulation-instability">the section on parametrization and instability</a> in the FluidX3D Documentation!<br><br></details>
 
 - <details><summary>The density and/or velocity field are oscillatory. Why?</summary>
 

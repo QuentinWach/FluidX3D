@@ -252,8 +252,8 @@ void LBM_Domain::enqueue_integrate_particles(const uint time_step_multiplicator)
 }
 #endif // PARTICLES
 
-void LBM_Domain::increment_time_step(const uint steps) {
-	t += (ulong)steps; // increment time step
+void LBM_Domain::increment_time_step(const ulong steps) {
+	t += steps; // increment time step
 #ifdef UPDATE_FIELDS
 	t_last_update_fields = t;
 #endif // UPDATE_FIELDS
@@ -405,22 +405,23 @@ string LBM_Domain::device_defines() const { return
 	"\n	#define TYPE_IG 0x30" // 0b00110000 // change from interface to gas
 	"\n	#define TYPE_GI 0x38" // 0b00111000 // change from gas to interface
 	"\n	#define TYPE_SU 0x38" // 0b00111000 // any flag bit used for SURFACE
+	"\n	#define TYPE_XY 0xC0" // 0b11000000 // any flag bit used for X or Y markers
 
 #if defined(FP16S)
 	"\n	#define fpxx half" // switchable data type (scaled IEEE-754 16-bit floating-point format: 1-5-10, exp-30, +-1.99902344, +-1.86446416E-9, +-1.81898936E-12, 3.311 digits)
 	"\n	#define fpxx_copy ushort" // switchable data type for direct copying (scaled IEEE-754 16-bit floating-point format: 1-5-10, exp-30, +-1.99902344, +-1.86446416E-9, +-1.81898936E-12, 3.311 digits)
-	"\n	#define load(p,o) vload_half(o,p)*3.0517578E-5f" // special function for loading half
+	"\n	#define load(p,o) (vload_half(o,p)*3.0517578E-5f)" // special function for loading half
 	"\n	#define store(p,o,x) vstore_half_rte((x)*32768.0f,o,p)" // special function for storing half
 #elif defined(FP16C)
 	"\n	#define fpxx ushort" // switchable data type (custom 16-bit floating-point format: 1-4-11, exp-15, +-1.99951168, +-6.10351562E-5, +-2.98023224E-8, 3.612 digits), 12.5% slower than IEEE-754 16-bit
 	"\n	#define fpxx_copy ushort" // switchable data type for direct copying (custom 16-bit floating-point format: 1-4-11, exp-15, +-1.99951168, +-6.10351562E-5, +-2.98023224E-8, 3.612 digits), 12.5% slower than IEEE-754 16-bit
-	"\n	#define load(p,o) half_to_float_custom(p[o])" // special function for loading half
-	"\n	#define store(p,o,x) p[o]=float_to_half_custom(x)" // special function for storing half
+	"\n	#define load(p,o) half_to_float_custom((p)[o])" // special function for loading half
+	"\n	#define store(p,o,x) (p)[o]=float_to_half_custom(x)" // special function for storing half
 #else // FP32
 	"\n	#define fpxx float" // switchable data type (regular 32-bit float)
 	"\n	#define fpxx_copy float" // switchable data type for direct copying (regular 32-bit float)
-	"\n	#define load(p,o) p[o]" // regular float read
-	"\n	#define store(p,o,x) p[o]=x" // regular float write
+	"\n	#define load(p,o) (p)[o]" // regular float read
+	"\n	#define store(p,o,x) (p)[o]=(x)" // regular float write
 #endif // FP32
 
 #ifdef UPDATE_FIELDS
@@ -1161,8 +1162,8 @@ int* LBM::Graphics::draw_frame() {
 	int* bitmap = lbm->lbm_domain[0]->graphics.get_bitmap();
 	int* zbuffer = lbm->lbm_domain[0]->graphics.get_zbuffer();
 	for(uint d=1u; d<lbm->get_D()&&new_frame; d++) {
-		const int* bitmap_d = lbm->lbm_domain[d]->graphics.get_bitmap(); // each domain renders its own frame
-		const int* zbuffer_d = lbm->lbm_domain[d]->graphics.get_zbuffer();
+		const int* const bitmap_d = lbm->lbm_domain[d]->graphics.get_bitmap(); // each domain renders its own frame
+		const int* const zbuffer_d = lbm->lbm_domain[d]->graphics.get_zbuffer();
 		for(uint i=0u; i<camera.width*camera.height; i++) {
 #ifndef GRAPHICS_TRANSPARENCY
 			const int zdi = zbuffer_d[i];
@@ -1281,25 +1282,25 @@ void LBM_Domain::allocate_transfer(Device& device) { // allocate all memory for 
 	transfer_buffer_p = Memory<char>(device, Amax, max(transfers*(uint)sizeof(fpxx), 17u), true, true, 0, false); // only allocate one set of transfer buffers in plus/minus directions, for all x/y/z transfers
 	transfer_buffer_m = Memory<char>(device, Amax, max(transfers*(uint)sizeof(fpxx), 17u), true, true, 0, false); // these transfer buffers must not be zero-copy!
 
-	kernel_transfer[enum_transfer_field::fi              ][0] = Kernel(device, 0u, "transfer_extract_fi"              , 0u, t, transfer_buffer_p, transfer_buffer_m, fi);
-	kernel_transfer[enum_transfer_field::fi              ][1] = Kernel(device, 0u, "transfer__insert_fi"              , 0u, t, transfer_buffer_p, transfer_buffer_m, fi);
-	kernel_transfer[enum_transfer_field::rho_u_flags     ][0] = Kernel(device, 0u, "transfer_extract_rho_u_flags"     , 0u, t, transfer_buffer_p, transfer_buffer_m, rho, u, flags);
-	kernel_transfer[enum_transfer_field::rho_u_flags     ][1] = Kernel(device, 0u, "transfer__insert_rho_u_flags"     , 0u, t, transfer_buffer_p, transfer_buffer_m, rho, u, flags);
-	kernel_transfer[enum_transfer_field::flags           ][0] = Kernel(device, 0u, "transfer_extract_flags"           , 0u, t, transfer_buffer_p, transfer_buffer_m, flags);
-	kernel_transfer[enum_transfer_field::flags           ][1] = Kernel(device, 0u, "transfer__insert_flags"           , 0u, t, transfer_buffer_p, transfer_buffer_m, flags);
+	kernel_transfer[enum_transfer_field::fi              ][0] = Kernel(device, 0ull, "transfer_extract_fi"              , 0u, t, transfer_buffer_p, transfer_buffer_m, fi);
+	kernel_transfer[enum_transfer_field::fi              ][1] = Kernel(device, 0ull, "transfer__insert_fi"              , 0u, t, transfer_buffer_p, transfer_buffer_m, fi);
+	kernel_transfer[enum_transfer_field::rho_u_flags     ][0] = Kernel(device, 0ull, "transfer_extract_rho_u_flags"     , 0u, t, transfer_buffer_p, transfer_buffer_m, rho, u, flags);
+	kernel_transfer[enum_transfer_field::rho_u_flags     ][1] = Kernel(device, 0ull, "transfer__insert_rho_u_flags"     , 0u, t, transfer_buffer_p, transfer_buffer_m, rho, u, flags);
+	kernel_transfer[enum_transfer_field::flags           ][0] = Kernel(device, 0ull, "transfer_extract_flags"           , 0u, t, transfer_buffer_p, transfer_buffer_m, flags);
+	kernel_transfer[enum_transfer_field::flags           ][1] = Kernel(device, 0ull, "transfer__insert_flags"           , 0u, t, transfer_buffer_p, transfer_buffer_m, flags);
 #ifdef FORCE_FIELD
-	kernel_transfer[enum_transfer_field::F               ][0] = Kernel(device, 0u, "transfer_extract_F"               , 0u, t, transfer_buffer_p, transfer_buffer_m, F);
-	kernel_transfer[enum_transfer_field::F               ][1] = Kernel(device, 0u, "transfer__insert_F"               , 0u, t, transfer_buffer_p, transfer_buffer_m, F);
+	kernel_transfer[enum_transfer_field::F               ][0] = Kernel(device, 0ull, "transfer_extract_F"               , 0u, t, transfer_buffer_p, transfer_buffer_m, F);
+	kernel_transfer[enum_transfer_field::F               ][1] = Kernel(device, 0ull, "transfer__insert_F"               , 0u, t, transfer_buffer_p, transfer_buffer_m, F);
 #endif // FORCE_FIELD
 #ifdef SURFACE
-	kernel_transfer[enum_transfer_field::phi_massex_flags][0] = Kernel(device, 0u, "transfer_extract_phi_massex_flags", 0u, t, transfer_buffer_p, transfer_buffer_m, phi, massex, flags);
-	kernel_transfer[enum_transfer_field::phi_massex_flags][1] = Kernel(device, 0u, "transfer__insert_phi_massex_flags", 0u, t, transfer_buffer_p, transfer_buffer_m, phi, massex, flags);
+	kernel_transfer[enum_transfer_field::phi_massex_flags][0] = Kernel(device, 0ull, "transfer_extract_phi_massex_flags", 0u, t, transfer_buffer_p, transfer_buffer_m, phi, massex, flags);
+	kernel_transfer[enum_transfer_field::phi_massex_flags][1] = Kernel(device, 0ull, "transfer__insert_phi_massex_flags", 0u, t, transfer_buffer_p, transfer_buffer_m, phi, massex, flags);
 #endif // SURFACE
 #ifdef TEMPERATURE
-	kernel_transfer[enum_transfer_field::gi              ][0] = Kernel(device, 0u, "transfer_extract_gi"              , 0u, t, transfer_buffer_p, transfer_buffer_m, gi);
-	kernel_transfer[enum_transfer_field::gi              ][1] = Kernel(device, 0u, "transfer__insert_gi"              , 0u, t, transfer_buffer_p, transfer_buffer_m, gi);
-	kernel_transfer[enum_transfer_field::T               ][0] = Kernel(device, 0u, "transfer_extract_T"               , 0u, t, transfer_buffer_p, transfer_buffer_m, T);
-	kernel_transfer[enum_transfer_field::T               ][1] = Kernel(device, 0u, "transfer__insert_T"               , 0u, t, transfer_buffer_p, transfer_buffer_m, T);
+	kernel_transfer[enum_transfer_field::gi              ][0] = Kernel(device, 0ull, "transfer_extract_gi"              , 0u, t, transfer_buffer_p, transfer_buffer_m, gi);
+	kernel_transfer[enum_transfer_field::gi              ][1] = Kernel(device, 0ull, "transfer__insert_gi"              , 0u, t, transfer_buffer_p, transfer_buffer_m, gi);
+	kernel_transfer[enum_transfer_field::T               ][0] = Kernel(device, 0ull, "transfer_extract_T"               , 0u, t, transfer_buffer_p, transfer_buffer_m, T);
+	kernel_transfer[enum_transfer_field::T               ][1] = Kernel(device, 0ull, "transfer__insert_T"               , 0u, t, transfer_buffer_p, transfer_buffer_m, T);
 #endif // TEMPERATURE
 }
 

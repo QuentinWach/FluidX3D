@@ -115,7 +115,7 @@ public:
 	void enqueue_integrate_particles(const uint time_step_multiplicator=1u); // intgegrates particles forward in time and couples particles to fluid
 #endif // PARTICLES
 
-	void increment_time_step(const uint steps=1u); // increment time step
+	void increment_time_step(const ulong steps=1ull); // increment time step
 	void reset_time_step(); // reset time step
 	void finish_queue();
 
