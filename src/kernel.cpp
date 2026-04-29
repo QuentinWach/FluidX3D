@@ -784,7 +784,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 )+R(bool is_below_plane(const float3 point, const float3 plane_p, const float3 plane_n) {
 	return dot(point-plane_p, plane_n)<=0.0f;
 }
-)+R(bool is_in_camera_frustrum(const float3 p, const float* camera_cache) { // returns true if point is located in camera frustrum
+)+R(bool is_in_camera_frustum(const float3 p, const float* camera_cache) { // returns true if point is located in camera frustum
 	const float zoom = camera_cache[0]; // fetch camera parameters (rotation matrix, camera position, etc.)
 	const float  dis = camera_cache[1];
 	const float3 pos = (float3)(camera_cache[ 2], camera_cache[ 3], camera_cache[ 4])-(float3)(def_domain_offset_x, def_domain_offset_y, def_domain_offset_z);
@@ -800,7 +800,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 	const float y_top    = (float)(-(int)def_screen_height/2 );
 	const float y_bottom = (float)((int)def_screen_height/2-1);
 	const float dis_clamped = fmin(dis, 1E4f); // avoid flickering at very small field of view
-	float3 r00 = p0+normalize((float3)(x_left , y_top   , -dis_clamped)); // get 4 edge vectors of frustrum, get_camray(...) inlined and redundant parts eliminated
+	float3 r00 = p0+normalize((float3)(x_left , y_top   , -dis_clamped)); // get 4 edge vectors of frustum, get_camray(...) inlined and redundant parts eliminated
 	float3 r01 = p0+normalize((float3)(x_right, y_top   , -dis_clamped));
 	float3 r10 = p0+normalize((float3)(x_left , y_bottom, -dis_clamped));
 	float3 r11 = p0+normalize((float3)(x_right, y_bottom, -dis_clamped));
@@ -808,13 +808,13 @@ string opencl_c_container() { return R( // ########################## begin of O
 	r01 = Rx*r01.x+Ry*r01.y+Rz*r01.z+pos-camera_center; // reverse rotation and reverse transformation of r01
 	r10 = Rx*r10.x+Ry*r10.y+Rz*r10.z+pos-camera_center; // reverse rotation and reverse transformation of r10
 	r11 = Rx*r11.x+Ry*r11.y+Rz*r11.z+pos-camera_center; // reverse rotation and reverse transformation of r11
-	const float3 plane_n_top    = cross(r00, r01); // get 4 frustrum planes
+	const float3 plane_n_top    = cross(r00, r01); // get 4 frustum planes
 	const float3 plane_n_bottom = cross(r11, r10);
 	const float3 plane_n_left   = cross(r10, r00);
 	const float3 plane_n_right  = cross(r01, r11);
-	const float3 plane_p_top    = camera_center-2.0f*plane_n_top; // move frustrum planes outward by 2 units
+	const float3 plane_p_top    = camera_center-2.0f*plane_n_top; // move frustum planes outward by 2 units
 	const float3 plane_p_bottom = camera_center-2.0f*plane_n_bottom;
-	const float3 plane_p_left   = camera_center-(2.0f+8.0f*(float)vr)*plane_n_left; // move frustrum planes outward by 2 units, for stereoscopic rendering a bit more
+	const float3 plane_p_left   = camera_center-(2.0f+8.0f*(float)vr)*plane_n_left; // move frustum planes outward by 2 units, for stereoscopic rendering a bit more
 	const float3 plane_p_right  = camera_center-(2.0f+8.0f*(float)vr)*plane_n_right;
 	return is_above_plane(p, plane_p_top, plane_n_top)&&is_above_plane(p, plane_p_bottom, plane_n_bottom)&&is_above_plane(p, plane_p_left, plane_n_left)&&is_above_plane(p, plane_p_right, plane_n_right);
 }
@@ -2456,7 +2456,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 	for(uint i=0u; i<15u; i++) camera_cache[i] = camera[i];
 	const uint3 xyz = coordinates(n);
 	const float3 p = position(xyz);
-	if(!is_in_camera_frustrum(p, camera_cache)) return; // skip loading LBM data if grid cell is not visible
+	if(!is_in_camera_frustum(p, camera_cache)) return; // skip loading LBM data if grid cell is not visible
 	uxx x0, xp, xm, y0, yp, ym, z0, zp, zm;
 	calculate_indices(n, &x0, &xp, &xm, &y0, &yp, &ym, &z0, &zp, &zm);
 	const int c = // coloring scheme
@@ -2523,7 +2523,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 	float camera_cache[15]; // cache camera parameters in case the kernel draws more than one shape
 	for(uint i=0u; i<15u; i++) camera_cache[i] = camera[i];
 	const float3 p = position(xyz);
-	if(!is_in_camera_frustrum(p, camera_cache)) return; // skip loading LBM data if grid cell is not visible
+	if(!is_in_camera_frustum(p, camera_cache)) return; // skip loading LBM data if grid cell is not visible
 	uxx j[8];
 	calculate_j8(xyz, j);
 	bool v[8];
@@ -2566,7 +2566,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 	float camera_cache[15]; // cache camera parameters in case the kernel draws more than one shape
 	for(uint i=0u; i<15u; i++) camera_cache[i] = camera[i];
 	const float3 p = position(xyz);
-	if(!is_in_camera_frustrum(p, camera_cache)) return; // skip loading LBM data if grid cell is not visible
+	if(!is_in_camera_frustum(p, camera_cache)) return; // skip loading LBM data if grid cell is not visible
 )+"#ifndef MOVING_BOUNDARIES"+R(
 	if(flags[n]&(TYPE_S|TYPE_E|TYPE_I|TYPE_G)) return;
 )+"#else"+R( // MOVING_BOUNDARIES
@@ -2708,7 +2708,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 	const float3 p00=position(xyz00), p01=position(xyz01), p10=position(xyz10), p11=position(xyz11), p=0.25f*(p00+p01+p10+p11);
 	float camera_cache[15]; // cache camera parameters in case the kernel draws more than one shape
 	for(uint i=0u; i<15u; i++) camera_cache[i] = camera[i];
-	if(!is_in_camera_frustrum(p, camera_cache)) return; // skip loading LBM data if grid cell is not visible
+	if(!is_in_camera_frustum(p, camera_cache)) return; // skip loading LBM data if grid cell is not visible
 	const uxx n00=index(xyz00), n01=index(xyz01), n10=index(xyz10), n11=index(xyz11);
 	bool d00=true, d01=true, d10=true, d11=true;
 )+"#ifdef SURFACE"+R(
@@ -2819,7 +2819,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 	const float3 p = position(coordinates(n));
 	float camera_cache[15]; // cache camera parameters in case the kernel draws more than one shape
 	for(uint i=0u; i<15u; i++) camera_cache[i] = camera[i];
-	if(!is_in_camera_frustrum(p, camera_cache)) return; // skip loading LBM data if grid cell is not visible
+	if(!is_in_camera_frustum(p, camera_cache)) return; // skip loading LBM data if grid cell is not visible
 	float3 un = load3(u, n); // cache velocity
 	const float ul = length(un);
 	const float Q = calculate_Q(n, u);
@@ -2849,7 +2849,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 	const float3 p = position(xyz);
 	float camera_cache[15]; // cache camera parameters in case the kernel draws more than one shape
 	for(uint i=0u; i<15u; i++) camera_cache[i] = camera[i];
-	if(!is_in_camera_frustrum(p, camera_cache)) return; // skip loading LBM data if grid cell is not visible
+	if(!is_in_camera_frustum(p, camera_cache)) return; // skip loading LBM data if grid cell is not visible
 	uxx j[32];
 	calculate_j32(xyz, j);
 )+"#ifdef SURFACE"+R(
@@ -2910,7 +2910,7 @@ string opencl_c_container() { return R( // ########################## begin of O
 	const float3 p = position(xyz);
 	float camera_cache[15]; // cache camera parameters in case the kernel draws more than one shape
 	for(uint i=0u; i<15u; i++) camera_cache[i] = camera[i];
-	if(!is_in_camera_frustrum(p, camera_cache)) return; // skip loading LBM data if grid cell is not visible
+	if(!is_in_camera_frustum(p, camera_cache)) return; // skip loading LBM data if grid cell is not visible
 	uxx j[8];
 	calculate_j8(xyz, j);
 	float v[8];
